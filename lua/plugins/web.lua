@@ -30,13 +30,14 @@ local function tsc_cmd(dispatchers, config)
   return vim.lsp.rpc.start({ bin, "--lsp", "--stdio" }, dispatchers)
 end
 
-local function lock_root(bufnr)
+local function project_root(bufnr)
   return vim.fs.root(bufnr, {
     "package-lock.json",
     "yarn.lock",
     "pnpm-lock.yaml",
     "bun.lock",
     "bun.lockb",
+    "node_modules",
   })
 end
 
@@ -55,14 +56,14 @@ local function has_tsc7(root)
 end
 
 local function tsc_root_dir(bufnr, on_dir)
-  local root = lock_root(bufnr)
+  local root = project_root(bufnr)
   if root and has_tsc7(root) then
     on_dir(root)
   end
 end
 
 local function vtsls_root_dir(bufnr, on_dir)
-  if has_tsc7(lock_root(bufnr)) then
+  if has_tsc7(project_root(bufnr)) then
     return
   end
   local root = vim.fs.root(bufnr, { "tsconfig.json", "jsconfig.json", "package.json" })
