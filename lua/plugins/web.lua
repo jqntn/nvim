@@ -30,25 +30,43 @@ local function tsc_cmd(dispatchers, config)
   return vim.lsp.rpc.start({ bin, "--lsp", "--stdio" }, dispatchers)
 end
 
-local function tsc_root_dir(bufnr, on_dir)
-  local root = vim.fs.root(bufnr, {
+local function lock_root(bufnr)
+  return vim.fs.root(bufnr, {
     "package-lock.json",
     "yarn.lock",
     "pnpm-lock.yaml",
     "bun.lock",
     "bun.lockb",
   })
+end
+
+local function has_tsc7(root)
   if not root then
-    return
+    return false
   end
   local ok, out = pcall(function()
     return vim.system({ tsc_bin(root), "--version" }, { text = true }):wait()
   end)
   if not ok or out.code ~= 0 then
-    return
+    return false
   end
   local version = vim.version.parse(out.stdout or "")
-  if version and version.major >= 7 then
+  return version ~= nil and version.major >= 7
+end
+
+local function tsc_root_dir(bufnr, on_dir)
+  local root = lock_root(bufnr)
+  if root and has_tsc7(root) then
+    on_dir(root)
+  end
+end
+
+local function vtsls_root_dir(bufnr, on_dir)
+  if has_tsc7(lock_root(bufnr)) then
+    return
+  end
+  local root = vim.fs.root(bufnr, { "tsconfig.json", "jsconfig.json", "package.json" })
+  if root then
     on_dir(root)
   end
 end
@@ -62,7 +80,7 @@ return {
         html = {},
         ts_ls = { enabled = false },
         tsc = { cmd = tsc_cmd, mason = false, root_dir = tsc_root_dir },
-        vtsls = { enabled = false },
+        vtsls = { root_dir = vtsls_root_dir },
         wasm_language_tools = {},
       },
     },
