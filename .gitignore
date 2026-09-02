@@ -8,3 +8,4 @@ Session.vim
 *.sw[a-p]
 *~
 lua/plugins/local.lua
+lazy-lock.json
